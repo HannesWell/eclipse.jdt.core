@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.IPath;
@@ -228,7 +229,7 @@ private void buildForProject(JavaProject project, ArrayList potentialSubtypes, o
 				if (!inProjectOfFocusType) {
 					char[] typeQualifiedName = focusType.getTypeQualifiedName('.').toCharArray();
 					PackageFragment fragment = (PackageFragment) focusType.getPackageFragment();
-					String[] packageName = fragment.names;
+					List<String> packageName = fragment.names;
 					if (searchableEnvironment.findType(typeQualifiedName, Util.toCharArrays(packageName)) == null) {
 						// focus type is not visible in this project: no need to go further
 						return;

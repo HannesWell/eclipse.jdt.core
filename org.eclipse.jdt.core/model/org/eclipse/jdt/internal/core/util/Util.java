@@ -25,11 +25,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -211,6 +214,13 @@ public class Util {
 		return result;
 	}
 
+	public static <T> List<T> addImmutableCopy(List<T> list, T element) {
+		List<T> newElements = new ArrayList<>(list.size() + 1);
+		newElements.addAll(list);
+		newElements.add(element);
+		return List.copyOf(newElements);
+	}
+
 	/**
 	 * Checks the type signature in String sig,
 	 * starting at start and ending before end (end is not included).
@@ -314,18 +324,18 @@ public class Util {
 	/**
 	 * Concatenate a String[] compound name to a continuous char[].
 	 */
-	public static char[] concatCompoundNameToCharArray(String[] compoundName) {
+	public static char[] concatCompoundNameToCharArray(List<String> compoundName) {
 		if (compoundName == null) return null;
-		int length = compoundName.length;
+		int length = compoundName.size();
 		if (length == 0) return new char[0];
 		int size = 0;
 		for (int i=0; i<length; i++) {
-			size += compoundName[i].length();
+			size += compoundName.get(i).length();
 		}
 		char[] compoundChars = new char[size+length-1];
 		int pos = 0;
 		for (int i=0; i<length; i++) {
-			String name = compoundName[i];
+			String name = compoundName.get(i);
 			if (i > 0) compoundChars[pos++] = '.';
 			int nameLength = name.length();
 			name.getChars(0, nameLength, compoundChars, pos);
@@ -345,38 +355,6 @@ public class Util {
 			buf.append(name2);
 		}
 		return buf.toString();
-	}
-	/**
-	 * Returns the concatenation of the given array parts using the given separator between each part.
-	 * <br>
-	 * <br>
-	 * For example:<br>
-	 * <ol>
-	 * <li><pre>
-	 *    array = {"a", "b"}
-	 *    separator = '.'
-	 *    => result = "a.b"
-	 * </pre>
-	 * </li>
-	 * <li><pre>
-	 *    array = {}
-	 *    separator = '.'
-	 *    => result = ""
-	 * </pre></li>
-	 * </ol>
-	 *
-	 * @param array the given array
-	 * @param separator the given separator
-	 * @return the concatenation of the given array parts using the given separator between each part
-	 */
-	public static final String concatWith(String[] array, char separator) {
-		StringBuilder buffer = new StringBuilder();
-		for (int i = 0, length = array.length; i < length; i++) {
-			buffer.append(array[i]);
-			if (i < length - 1)
-				buffer.append(separator);
-		}
-		return buffer.toString();
 	}
 
 	/**
@@ -407,41 +385,24 @@ public class Util {
 	 * </pre></li>
 	 * </ol>
 	 *
-	 * @param array the given array
+	 * @param list the given list
 	 * @param name the given name
 	 * @param separator the given separator
 	 * @return the concatenation of the given array parts using the given separator between each
 	 * part and appending the given name at the end
 	 */
-	public static final String concatWith(
-		String[] array,
-		String name,
-		char separator) {
-
-		if (array == null || array.length == 0) return name;
-		if (name == null || name.length() == 0) return concatWith(array, separator);
-		StringBuilder buffer = new StringBuilder();
-		for (String s : array) {
-			buffer.append(s);
-			buffer.append(separator);
+	public static final String concatWith(List<String> list, String name, char separator) {
+		if (list == null || list.isEmpty()) {
+			return name;
+		} else if (name == null) {
+			return String.join(new String(new char[] { separator }), list);
+		} else {
+			StringJoiner joiner = new StringJoiner(new String(new char[] { separator }), "", separator + name); //$NON-NLS-1$
+			for (String element : list) {
+				joiner.add(element);
+			}
+			return joiner.toString();
 		}
-		buffer.append(name);
-		return buffer.toString();
-
-	}
-
-	public static final char[] concat(char[] first, char[] second) {
-		if (first == null)
-			return second;
-		if (second == null)
-			return first;
-
-		int length1 = first.length;
-		int length2 = second.length;
-		char[] result = new char[length1 + length2];
-		System.arraycopy(first, 0, result, 0, length1);
-		System.arraycopy(second, 0, result, length1, length2);
-		return result;
 	}
 
 	/**
@@ -509,47 +470,6 @@ public class Util {
 
 	/**
 	 * Compares two arrays using equals() on the elements.
-	 * Neither can be null. Only the first len elements are compared.
-	 * Return false if either array is shorter than len.
-	 */
-	public static boolean equalArrays(Object[] a, Object[] b, int len) {
-		if (a == b)	return true;
-		if (a.length < len || b.length < len) return false;
-		for (int i = 0; i < len; ++i) {
-			if (a[i] == null) {
-				if (b[i] != null) return false;
-			} else {
-				if (!a[i].equals(b[i])) return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Compares two arrays using equals() on the elements.
-	 * Either or both arrays may be null.
-	 * Returns true if both are null.
-	 * Returns false if only one is null.
-	 * If both are arrays, returns true iff they have the same length and
-	 * all elements are equal.
-	 */
-	public static boolean equalArraysOrNull(int[] a, int[] b) {
-		if (a == b)
-			return true;
-		if (a == null || b == null)
-			return false;
-		int len = a.length;
-		if (len != b.length)
-			return false;
-		for (int i = 0; i < len; ++i) {
-			if (a[i] != b[i])
-				return false;
-		}
-		return true;
-	}
-
-	/**
-	 * Compares two arrays using equals() on the elements.
 	 * Either or both arrays may be null.
 	 * Returns true if both are null.
 	 * Returns false if only one is null.
@@ -575,56 +495,6 @@ public class Util {
 	}
 
 	/**
-	 * Compares two arrays using equals() on the elements.
-	 * The arrays are first sorted.
-	 * Either or both arrays may be null.
-	 * Returns true if both are null.
-	 * Returns false if only one is null.
-	 * If both are arrays, returns true iff they have the same length and
-	 * iff, after sorting both arrays, all elements compare true with equals.
-	 * The original arrays are left untouched.
-	 */
-	public static boolean equalArraysOrNullSortFirst(Comparable[] a, Comparable[] b) {
-		if (a == b)	return true;
-		if (a == null || b == null) return false;
-		int len = a.length;
-		if (len != b.length) return false;
-		if (len >= 2) {  // only need to sort if more than two items
-			a = sortCopy(a);
-			b = sortCopy(b);
-		}
-		for (int i = 0; i < len; ++i) {
-			if (!a[i].equals(b[i])) return false;
-		}
-		return true;
-	}
-
-	/**
-	 * Compares two String arrays using equals() on the elements.
-	 * The arrays are first sorted.
-	 * Either or both arrays may be null.
-	 * Returns true if both are null.
-	 * Returns false if only one is null.
-	 * If both are arrays, returns true iff they have the same length and
-	 * iff, after sorting both arrays, all elements compare true with equals.
-	 * The original arrays are left untouched.
-	 */
-	public static boolean equalArraysOrNullSortFirst(String[] a, String[] b) {
-		if (a == b)	return true;
-		if (a == null || b == null) return false;
-		int len = a.length;
-		if (len != b.length) return false;
-		if (len >= 2) {  // only need to sort if more than two items
-			a = sortCopy(a);
-			b = sortCopy(b);
-		}
-		for (int i = 0; i < len; ++i) {
-			if (!a[i].equals(b[i])) return false;
-		}
-		return true;
-	}
-
-	/**
 	 * Compares two objects using equals().
 	 * Either or both array may be null.
 	 * Returns true if both are null.
@@ -632,13 +502,8 @@ public class Util {
 	 * Otherwise, return the result of comparing with equals().
 	 */
 	public static boolean equalOrNull(Object a, Object b) {
-		if (a == b) {
-			return true;
-		}
-		if (a == null || b == null) {
-			return false;
-		}
-		return a.equals(b);
+		//TODO: Inline
+		return Objects.equals(a, b);
 	}
 
 	/*
@@ -1044,7 +909,7 @@ public class Util {
 			String jarMemento = new String(fileName, 0, jarSeparator);
 			PackageFragmentRoot root = (PackageFragmentRoot) JavaCore.create(jarMemento);
 			if (pkgEnd == jarSeparator)
-				return root.getPackageFragment(CharOperation.NO_STRINGS);
+				return root.getPackageFragment();
 			char[] pkgName = CharOperation.subarray(fileName, jarSeparator+1, pkgEnd);
 			char[][] compoundName = CharOperation.splitOn('/', pkgName);
 			return root.getPackageFragment(CharOperation.toStrings(compoundName));
@@ -1390,12 +1255,9 @@ public class Util {
 	/**
 	 * Returns a trimmed version the simples names returned by Signature.
 	 */
-	public static String[] getTrimmedSimpleNames(String name) {
+	public static List<String> getTrimmedSimpleNames(String name) {
 		String[] result = Signature.getSimpleNames(name);
-		for (int i = 0, length = result.length; i < length; i++) {
-			result[i] = result[i].trim();
-		}
-		return result;
+		return Arrays.stream(result).map(String::trim).toList();
 	}
 
 	/**
@@ -2313,14 +2175,14 @@ public class Util {
 	 * @return a new array which is the split of the given string using the given divider
 	 * @throws ArrayIndexOutOfBoundsException if start is lower than 0 or end is greater than the array length
 	 */
-	public static final String[] splitOn(
+	public static final List<String> splitOn(
 		char divider,
 		String string,
 		int start,
 		int end) {
 		int length = string == null ? 0 : string.length();
 		if (length == 0 || start > end)
-			return CharOperation.NO_STRINGS;
+			return List.of();
 
 		int wordCount = 1;
 		for (int i = start; i < end; i++)
@@ -2335,7 +2197,7 @@ public class Util {
 			}
 		}
 		split[currentWord] = string.substring(last, end);
-		return split;
+		return List.of(split);
 	}
 	/**
 	 * Sets or unsets the given resource as read-only in the file system.
@@ -2450,26 +2312,29 @@ public class Util {
 	 * Returns true if the n first elements of the prefix are equals and the last element of the
 	 * prefix is a prefix of the corresponding element in the compound name.
 	 */
-	public static boolean startsWithIgnoreCase(String[] compoundName, String[] prefix, boolean partialMatch) {
-		int prefixLength = prefix.length;
-		int nameLength = compoundName.length;
+	public static boolean startsWithIgnoreCase(List<String> compoundName, List<String> prefix, boolean partialMatch) {
+		int prefixLength = prefix.size();
+		int nameLength = compoundName.size();
 		if (prefixLength > nameLength) return false;
 		for (int i = 0; i < prefixLength - 1; i++) {
-			if (!compoundName[i].equalsIgnoreCase(prefix[i]))
+			if (!compoundName.get(i).equalsIgnoreCase(prefix.get(i)))
 				return false;
 		}
-		return (partialMatch || prefixLength == nameLength) && compoundName[prefixLength-1].toLowerCase().startsWith(prefix[prefixLength-1].toLowerCase());
+		return (partialMatch || prefixLength == nameLength) && compoundName.get(prefixLength - 1).toLowerCase()
+				.startsWith(prefix.get(prefixLength - 1).toLowerCase());
 	}
 
 	/**
 	 * Converts a String[] to char[][].
 	 */
-	public static char[][] toCharArrays(String[] a) {
-		int len = a.length;
-		if (len == 0) return CharOperation.NO_CHAR_CHAR;
+	public static char[][] toCharArrays(List<String> a) {
+		if (a.isEmpty()) {
+			return CharOperation.NO_CHAR_CHAR;
+		}
+		int len = a.size();
 		char[][] result = new char[len][];
 		for (int i = 0; i < len; ++i) {
-			result[i] = a[i].toCharArray();
+			result[i] = a.get(i).toCharArray();
 		}
 		return result;
 	}

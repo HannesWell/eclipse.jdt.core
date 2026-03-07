@@ -240,7 +240,7 @@ public void add(IJavaElement element) throws JavaModelException {
 			root = (PackageFragmentRoot)element.getParent();
 			projectPath = root.getJavaProject().getPath().toString();
 			if (root.isArchive()) {
-				String relativePath = Util.concatWith(((PackageFragment) element).names, '/');
+				String relativePath = String.join("/", ((PackageFragment) element).names); //$NON-NLS-1$
 				containerPath = root.getPath();
 				containerPathToString = containerPath.getDevice() == null ? containerPath.toString() : containerPath.toOSString();
 				add(projectPath, relativePath, containerPathToString, true/*package*/, null);
@@ -507,7 +507,7 @@ private IPath getPath(IJavaElement element, boolean relativeToRoot) {
 				return Path.EMPTY;
 			return element.getPath();
 		case IJavaElement.PACKAGE_FRAGMENT:
-			String relativePath = Util.concatWith(((PackageFragment) element).names, '/');
+			String relativePath = String.join("/", ((PackageFragment) element).names); //$NON-NLS-1$
 			return getPath(element.getParent(), relativeToRoot).append(new Path(relativePath));
 		case IJavaElement.COMPILATION_UNIT:
 		case IJavaElement.CLASS_FILE:

@@ -1050,7 +1050,7 @@ public class SearchableEnvironment
 				case AnyNamed:
 					char[][] names = CharOperation.NO_CHAR_CHAR;
 					// narrow down candidates of roots (https://bugs.eclipse.org/566498)
-					IPackageFragmentRoot[] matchingRoots = this.nameLookup.findPackageFragementRoots(pkgName);
+					List<IPackageFragmentRoot> matchingRoots = this.nameLookup.findPackageFragementRoots(pkgName);
 					if(matchingRoots != null) {
 						boolean containsUnnamed = false;
 						for (IPackageFragmentRoot packageRoot : matchingRoots) {
@@ -1116,7 +1116,7 @@ public class SearchableEnvironment
 			case AnyNamed:
 				// narrow down candidates of roots (https://bugs.eclipse.org/566498)
 				String[] splittedName = Util.toStrings(pkgName);
-				IPackageFragmentRoot[] packageRoots = this.nameLookup.findPackageFragementRoots(splittedName);
+				List<IPackageFragmentRoot> packageRoots = this.nameLookup.findPackageFragementRoots(splittedName);
 				if(packageRoots != null) {
 					for (IPackageFragmentRoot packageRoot : packageRoots) {
 						IPackageFragmentRoot[] singleton = { packageRoot };

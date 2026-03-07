@@ -13,9 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.core.util;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -24,7 +25,6 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.*;
-import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.core.search.IJavaSearchScope;
 import org.eclipse.jdt.internal.compiler.ast.AbstractMethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.AbstractVariableDeclaration;
@@ -62,7 +62,7 @@ public class HandleFactory {
 	/**
 	 * Cache package handles to optimize memory.
 	 */
-	private HashtableOfArrayToObject packageHandles;
+	private Map<List<String>, IPackageFragment> packageHandles;
 
 	private final JavaModel javaModel;
 
@@ -95,7 +95,7 @@ public class HandleFactory {
 					return null; // match is outside classpath
 				this.lastPkgFragmentRootPath = jarPath;
 				this.lastPkgFragmentRoot = root;
-				this.packageHandles = new HashtableOfArrayToObject(5);
+				this.packageHandles = new HashMap<>();
 			}
 			// create handle
 			String module = null;
@@ -107,15 +107,15 @@ public class HandleFactory {
 			String classFilePath= resourcePath.substring(separatorIndex + 1);
 			if (classFilePath.endsWith(TypeConstants.AUTOMATIC_MODULE_NAME))
 				return this.lastPkgFragmentRoot;
-			String[] simpleNames = new Path(classFilePath).segments();
-			String[] pkgName;
-			int length = simpleNames.length-1;
+			String[] simpleNames = IPath.fromOSString(classFilePath).segments();
+			List<String> pkgName;
+			int length = simpleNames.length - 1;
 			if (length > 0) {
-				pkgName = Arrays.copyOf(simpleNames, length);
+				pkgName = List.of(simpleNames).subList(0, length);
 			} else {
-				pkgName = CharOperation.NO_STRINGS;
+				pkgName = List.of();
 			}
-			IPackageFragment pkgFragment= (IPackageFragment) this.packageHandles.get(pkgName);
+			IPackageFragment pkgFragment = this.packageHandles.get(pkgName);
 			if (pkgFragment == null) {
 				pkgFragment= this.lastPkgFragmentRoot.getPackageFragment(pkgName, module);
 				this.packageHandles.put(pkgName, pkgFragment);
@@ -136,20 +136,19 @@ public class HandleFactory {
 					return null; // match is outside classpath
 				this.lastPkgFragmentRoot = root;
 				this.lastPkgFragmentRootPath = this.lastPkgFragmentRoot.internalPath().toString();
-				this.packageHandles = new HashtableOfArrayToObject(5);
+				this.packageHandles = new HashMap<>();
 			}
 			// create handle
 			resourcePath = resourcePath.substring(this.lastPkgFragmentRootPath.length() + 1);
-			String[] simpleNames = new Path(resourcePath).segments();
-			String[] pkgName;
-			int length = simpleNames.length-1;
+			String[] simpleNames = IPath.fromOSString(resourcePath).segments();
+			List<String> pkgName;
+			int length = simpleNames.length - 1;
 			if (length > 0) {
-				pkgName = new String[length];
-				System.arraycopy(simpleNames, 0, pkgName, 0, length);
+				pkgName = List.of(simpleNames).subList(0, length);
 			} else {
-				pkgName = CharOperation.NO_STRINGS;
+				pkgName = List.of();
 			}
-			IPackageFragment pkgFragment= (IPackageFragment) this.packageHandles.get(pkgName);
+			IPackageFragment pkgFragment = this.packageHandles.get(pkgName);
 			if (pkgFragment == null) {
 				pkgFragment= this.lastPkgFragmentRoot.getPackageFragment(pkgName);
 				this.packageHandles.put(pkgName, pkgFragment);

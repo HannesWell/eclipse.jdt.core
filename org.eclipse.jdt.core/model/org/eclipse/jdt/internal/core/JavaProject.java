@@ -944,11 +944,11 @@ public class JavaProject
 			super(null, externalJarPath, JavaProject.this, extraAttributes);
 		}
 		@Override
-		public PackageFragment getPackageFragment(String[] pkgName) {
+		public PackageFragment getPackageFragment(List<String> pkgName) {
 			return getPackageFragment(pkgName, null);
 		}
 		@Override
-		public PackageFragment getPackageFragment(String[] pkgName, String mod) {
+		public PackageFragment getPackageFragment(List<String> pkgName, String mod) {
 			PackageFragmentRoot realRoot = new JrtPackageFragmentRoot(this.jarPath,
 												mod == null ?  JRTUtil.JAVA_BASE : mod,
 												JavaProject.this,

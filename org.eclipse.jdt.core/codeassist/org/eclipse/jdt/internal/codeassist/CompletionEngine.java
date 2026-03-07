@@ -14683,13 +14683,13 @@ public final class CompletionEngine
 	public void findPackagesInModule(char[] prefix,  ModuleBinding module, Scope scope) {
 		if (module != null ) {
 			String name= new String(prefix);
-			String[] splittedName = Util.splitOn('.', new String(name), 0, name.length());
+			List<String> splittedName = Util.splitOn('.', name, 0, name.length());
 			PackageBinding[] pkgBindings = module.getExports();
 			for (PackageBinding pkgBinding : pkgBindings) {
 				String[] pkgName = CharOperation.toStrings(pkgBinding.compoundName);
 				if (pkgName != null &&
 						( name.isEmpty() ||
-								Util.startsWithIgnoreCase(pkgName, splittedName, true))) {
+								Util.startsWithIgnoreCase(Arrays.asList(pkgName), splittedName, true))) {
 					acceptPackage(CharOperation.toString(pkgBinding.compoundName).toCharArray(), module.moduleName);
 				}
 			}

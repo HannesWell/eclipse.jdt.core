@@ -287,11 +287,11 @@ public class JarPackageFragmentRoot extends PackageFragmentRoot {
 		return nonJavaResources;
 	}
 	@Override
-	public PackageFragment getPackageFragment(String[] pkgName) {
+	public PackageFragment getPackageFragment(List<String> pkgName) {
 		return new JarPackageFragment(this, pkgName);
 	}
 	@Override
-	public PackageFragment getPackageFragment(String[] pkgName, String mod) {
+	public PackageFragment getPackageFragment(List<String> pkgName, String mod) {
 		return new JarPackageFragment(this, pkgName); // Overridden in JImageModuleFragmentBridge
 	}
 
@@ -365,7 +365,7 @@ public class JarPackageFragmentRoot extends PackageFragmentRoot {
 		} else {
 			lastSeparator = className.lastIndexOf('/');
 		}
-		ArrayList<String> pkgName = new ArrayList<>(Arrays.asList(Util.splitOn('/', className, 0, lastSeparator)));
+		List<String> pkgName = Util.splitOn('/', className, 0, lastSeparator);
 		PackageContent existing = null;
 		int length = pkgName.size();
 		int existingLength;

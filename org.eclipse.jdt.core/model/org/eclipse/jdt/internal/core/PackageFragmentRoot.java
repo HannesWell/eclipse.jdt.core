@@ -15,6 +15,7 @@ package org.eclipse.jdt.internal.core;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.jar.Manifest;
 import org.eclipse.core.resources.IContainer;
@@ -27,7 +28,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.core.*;
-import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.env.AutomaticModuleNaming;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
@@ -211,7 +211,8 @@ protected boolean computeChildren(OpenableElementInfo info, IResource underlying
 			IContainer rootFolder = (IContainer) underlyingResource;
 			char[][] inclusionPatterns = fullInclusionPatternChars();
 			char[][] exclusionPatterns = fullExclusionPatternChars();
-			computeFolderChildren(rootFolder, !Util.isExcluded(rootFolder, inclusionPatterns, exclusionPatterns), CharOperation.NO_STRINGS, vChildren, inclusionPatterns, exclusionPatterns);
+			boolean isIncluded = !Util.isExcluded(rootFolder, inclusionPatterns, exclusionPatterns);
+			computeFolderChildren(rootFolder, isIncluded, List.of(), vChildren, inclusionPatterns, exclusionPatterns);
 //			char[] suffix = getKind() == K_SOURCE ? SuffixConstants.SUFFIX_java : SuffixConstants.SUFFIX_class;
 //			char[] moduleInfoName = CharOperation.concat(TypeConstants.MODULE_INFO_NAME, suffix);
 //			IResource module = rootFolder.findMember(String.valueOf(moduleInfoName), true);
@@ -240,7 +241,7 @@ protected boolean computeChildren(OpenableElementInfo info, IResource underlying
  *
  * @exception JavaModelException  The resource associated with this package fragment does not exist
  */
-protected void computeFolderChildren(IContainer folder, boolean isIncluded, String[] pkgName, ArrayList vChildren, char[][] inclusionPatterns, char[][] exclusionPatterns) throws JavaModelException {
+protected void computeFolderChildren(IContainer folder, boolean isIncluded, List<String> pkgName, ArrayList vChildren, char[][] inclusionPatterns, char[][] exclusionPatterns) throws JavaModelException {
 
 	if (isIncluded) {
 	    IPackageFragment pkg = getPackageFragment(pkgName);
@@ -270,7 +271,9 @@ protected void computeFolderChildren(IContainer folder, boolean isIncluded, Stri
 			    		if (Util.isValidFolderNameForPackage(memberName, sourceLevel, complianceLevel)) {
 			    			// eliminate binary output only if nested inside direct subfolders
 			    			if (javaProject.contains(member)) {
-			    				String[] newNames = Util.arrayConcat(pkgName, DeduplicationUtil.intern(memberName));
+								List<String> newNames = new ArrayList<>(pkgName.size() + 1);
+								newNames.addAll(pkgName);
+								newNames.add(DeduplicationUtil.intern(memberName));
 			    				boolean isMemberIncluded = !Util.isExcluded(member, inclusionPatterns, exclusionPatterns);
 			    				computeFolderChildren((IFolder) member, isMemberIncluded, newNames, vChildren, inclusionPatterns, exclusionPatterns);
 			    			}
@@ -468,18 +471,18 @@ protected char getHandleMementoDelimiter() {
 public IJavaElement getHandleFromMemento(String token, MementoTokenizer memento, WorkingCopyOwner owner) {
 	switch (token.charAt(0)) {
 		case JEM_PACKAGEFRAGMENT:
-			String[] pkgName;
+			List<String> pkgName;
 			if (memento.hasMoreTokens()) {
 				token = memento.nextToken();
 				char firstChar = token.charAt(0);
 				if (firstChar == JEM_CLASSFILE || firstChar == JEM_MODULAR_CLASSFILE || firstChar == JEM_COMPILATIONUNIT || firstChar == JEM_COUNT) {
-					pkgName = CharOperation.NO_STRINGS;
+					pkgName = List.of();
 				} else {
 					pkgName = Util.splitOn('.', token, 0, token.length());
 					token = null;
 				}
 			} else {
-				pkgName = CharOperation.NO_STRINGS;
+				pkgName = List.of();
 				token = null;
 			}
 			JavaElement pkg = getPackageFragment(pkgName);
@@ -566,15 +569,26 @@ public Object[] getNonJavaResources() throws JavaModelException {
 @Override
 public IPackageFragment getPackageFragment(String packageName) {
 	// tolerate package names with spaces (e.g. 'x . y') (http://bugs.eclipse.org/bugs/show_bug.cgi?id=21957)
-	String[] pkgName = Util.getTrimmedSimpleNames(packageName);
+	List<String> pkgName = Util.getTrimmedSimpleNames(packageName);
 	return getPackageFragment(pkgName);
 }
+
+public PackageFragment getPackageFragment() {
+	return getPackageFragment(List.of());
+}
+
 public PackageFragment getPackageFragment(String[] pkgName) {
+	return getPackageFragment(List.of(pkgName));
+}
+
+public PackageFragment getPackageFragment(List<String> pkgName) {
 	return new PackageFragment(this, pkgName);
 }
-public PackageFragment getPackageFragment(String[] pkgName, String mod) {
+
+public PackageFragment getPackageFragment(List<String> pkgName, String mod) {
 	return new PackageFragment(this, pkgName); // Overridden in JImageModuleFragmentBridge
 }
+
 /**
  * Returns the package name for the given folder
  * (which is a decendent of this root).

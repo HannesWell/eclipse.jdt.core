@@ -64,7 +64,7 @@ public class CreatePackageFragmentOperation extends JavaModelOperation {
  */
 public CreatePackageFragmentOperation(IPackageFragmentRoot parentElement, String packageName, boolean force) {
 	super(null, new IJavaElement[]{parentElement}, force);
-	this.pkgName = packageName == null ? null : Util.getTrimmedSimpleNames(packageName);
+	this.pkgName = packageName == null ? null : Util.getTrimmedSimpleNames(packageName).toArray(String[]::new);
 }
 /**
  * Execute the operation - creates the new package fragment and any
@@ -144,7 +144,7 @@ public IJavaModelStatus verify() {
 		return new JavaModelStatus(IJavaModelStatusConstants.NO_ELEMENTS_TO_PROCESS);
 	}
 
-	String packageName = this.pkgName == null ? null : Util.concatWith(this.pkgName, '.');
+	String packageName = this.pkgName == null ? null : String.join(".", this.pkgName); //$NON-NLS-1$
 	IJavaProject project = parentElement.getJavaProject();
 	if (this.pkgName == null || (this.pkgName.length > 0 && JavaConventions.validatePackageName(packageName, project.getOption(JavaCore.COMPILER_SOURCE, true), project.getOption(JavaCore.COMPILER_COMPLIANCE, true)).getSeverity() == IStatus.ERROR)) {
 		return new JavaModelStatus(IJavaModelStatusConstants.INVALID_NAME, packageName);

@@ -250,10 +250,9 @@ private IBinaryType getJarBinaryTypeInfo() throws CoreException, IOException, Cl
 			return result;
 		}
 		if (entry != null) {
-			PackageFragment pkg = (PackageFragment) getParent();
-			String entryName = Util.concatWith(pkg.names, getElementName(), '/');
-			entryName = new String(Util.concat(
-					BinaryTypeFactory.fieldDescriptorToBinaryName(descriptor.fieldDescriptor), SuffixConstants.SUFFIX_CLASS));
+			String entryName = new StringBuilder()
+					.append(BinaryTypeFactory.fieldDescriptorToBinaryName(descriptor.fieldDescriptor))
+					.append(SuffixConstants.SUFFIX_STRING_CLASS).toString();
 			IProject project = javaProject.getProject();
 			IPath externalAnnotationPath = entry.getExternalAnnotationPath(project, false); // unresolved for use in ExternalAnnotationTracker
 			if (externalAnnotationPath != null) {

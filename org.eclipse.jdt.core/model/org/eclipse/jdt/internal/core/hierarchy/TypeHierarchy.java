@@ -26,6 +26,7 @@ import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -1228,7 +1229,7 @@ protected boolean packageRegionContainsSamePackageFragment(PackageFragment eleme
 	IJavaElement[] pkgs = this.packageRegion.getElements();
 	for (IJavaElement e : pkgs) {
 		PackageFragment pkg = (PackageFragment) e;
-		if (Util.equalArraysOrNull(pkg.names, element.names))
+		if (Objects.equals(pkg.names, element.names))
 			return true;
 	}
 	return false;

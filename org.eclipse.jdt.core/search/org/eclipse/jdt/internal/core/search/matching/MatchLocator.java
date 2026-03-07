@@ -831,7 +831,7 @@ private boolean filterEnum(SearchMatch match) {
 	PackageFragment pkg = (PackageFragment)element.getAncestor(IJavaElement.PACKAGE_FRAGMENT);
 	if (pkg != null) {
 		// enum was found in org.apache.commons.lang.enum at index 5
-		if (pkg.names.length == 5 && pkg.names[4].equals("enum")) {  //$NON-NLS-1$
+		if (pkg.names.size() == 5 && pkg.names.get(4).equals("enum")) { //$NON-NLS-1$
 			return true;
 		}
 	}
@@ -1645,11 +1645,9 @@ protected void locatePackageDeclarations(SearchPattern searchPattern, SearchPart
 			}
 			// Get all project package fragment names
 			this.nameLookup = ((JavaProject) javaProject).newNameLookup(this.workingCopies);
-			IPackageFragment[] packageFragments = this.nameLookup.findPackageFragments(new String(pkgPattern.pkgName), false, true);
-			int pLength = packageFragments == null ? 0 : packageFragments.length;
+			List<IPackageFragment> packageFragments = this.nameLookup.findPackageFragments(new String(pkgPattern.pkgName), false, true);
 			// Report matches avoiding duplicate names
-			for (int p=0; p<pLength; p++) {
-				IPackageFragment fragment = packageFragments[p];
+			for (IPackageFragment fragment : packageFragments) {
 				if (packages.addIfNotIncluded(fragment) == null) continue;
 				if (encloses(fragment)) {
 					IResource resource = fragment.getResource();

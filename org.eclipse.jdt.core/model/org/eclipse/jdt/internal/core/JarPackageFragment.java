@@ -43,7 +43,7 @@ class JarPackageFragment extends PackageFragment {
 /**
  * Constructs a package fragment that is contained within a jar or a zip.
  */
-protected JarPackageFragment(PackageFragmentRoot root, String[] names) {
+protected JarPackageFragment(PackageFragmentRoot root, List<String> names) {
 	super(root, names);
 }
 /**
@@ -99,7 +99,7 @@ private Object[] computeNonJavaResources(List<String> entryNames) {
 		// consider that a .java file is not a non-java resource (see bug 12246 Packages view shows .class and .java files when JAR has source)
 		if (!Util.isJavaLikeFileName(resName)) {
 			IPath filePath = new Path(resName);
-			IPath childPath = filePath.removeFirstSegments(this.names.length);
+			IPath childPath = filePath.removeFirstSegments(this.names.size());
 			if (jarEntries.containsKey(childPath)) {
 				// see https://bugs.eclipse.org/bugs/show_bug.cgi?id=222665
 				continue;

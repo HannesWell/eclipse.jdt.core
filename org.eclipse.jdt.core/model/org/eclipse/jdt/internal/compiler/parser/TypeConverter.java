@@ -14,6 +14,7 @@
 package org.eclipse.jdt.internal.compiler.parser;
 
 import java.util.ArrayList;
+import java.util.List;
 import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ast.*;
@@ -48,18 +49,18 @@ public abstract class TypeConverter {
 	 * Build an import reference from an import name, e.g. java.lang.*
 	 */
 	protected ImportReference createImportReference(
-		String[] importName,
+		List<String> importName,
 		int start,
 		int end,
 		boolean onDemand,
 		int modifiers) {
 
-		int length = importName.length;
+		int length = importName.size();
 		long[] positions = new long[length];
 		long position = ((long) start << 32) + end;
 		char[][] qImportName = new char[length][];
 		for (int i = 0; i < length; i++) {
-			qImportName[i] = importName[i].toCharArray();
+			qImportName[i] = importName.get(i).toCharArray();
 			positions[i] = position; // dummy positions
 		}
 		return new ImportReference(

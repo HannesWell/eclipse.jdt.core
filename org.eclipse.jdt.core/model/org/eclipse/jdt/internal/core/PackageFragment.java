@@ -15,10 +15,11 @@ package org.eclipse.jdt.internal.core;
 
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
@@ -27,7 +28,6 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.*;
 import org.eclipse.jdt.internal.compiler.lookup.TypeConstants;
 import org.eclipse.jdt.internal.compiler.util.SuffixConstants;
@@ -52,13 +52,13 @@ public class PackageFragment extends Openable implements IPackageFragment, Suffi
 	 */
 	protected static final ICompilationUnit[] NO_COMPILATION_UNITS = new ICompilationUnit[] {};
 
-	public final String[] names;
+	public final List<String> names;
 
 	private final boolean isValidPackageName;
 
-protected PackageFragment(PackageFragmentRoot root, String[] names) {
+	protected PackageFragment(PackageFragmentRoot root, List<String> names) {
 	super(root);
-	this.names = names;
+	this.names = List.copyOf(names);
 	this.isValidPackageName = internalIsValidPackageName();
 }
 /**
@@ -171,13 +171,13 @@ public void delete(boolean force, IProgressMonitor monitor) throws JavaModelExce
 public boolean equals(Object o) {
 	if (this == o) return true;
 	if (!(o instanceof PackageFragment other)) return false;
-	return Util.equalArraysOrNull(this.names, other.names) &&
+	return Objects.equals(this.names, other.names) &&
 			this.getParent().equals(other.getParent());
 }
 
 @Override
 protected int calculateHashCode() {
-	return Util.combineHashCodes(this.getParent().hashCode(), Arrays.hashCode(this.names));
+	return Util.combineHashCodes(this.getParent().hashCode(), this.names.hashCode());
 }
 
 @Override
@@ -320,9 +320,9 @@ public ICompilationUnit[] getCompilationUnits(WorkingCopyOwner owner) {
 }
 @Override
 public String getElementName() {
-	if (this.names.length == 0)
+	if (this.names.isEmpty())
 		return DEFAULT_PACKAGE_NAME;
-	return Util.concatWith(this.names, '.');
+	return String.join(".", this.names); //$NON-NLS-1$
 }
 /**
  * @see IJavaElement
@@ -400,13 +400,13 @@ public IPath getPath() {
  */
 @Override
 public IResource resource(PackageFragmentRoot root) {
-	int length = this.names.length;
-	if (length == 0) {
+	if (this.names.isEmpty()) {
 		return root.resource(root);
 	} else {
-		IPath path = new Path(this.names[0]);
-		for (int i = 1; i < length; i++)
-			path = path.append(this.names[i]);
+		IPath path = IPath.fromOSString(this.names.get(0));
+		for (String name : this.names.subList(1, this.names.size())) {
+			path = path.append(name);
+		}
 		return ((IContainer)root.resource(root)).getFolder(path);
 	}
 }
@@ -424,8 +424,7 @@ public IResource getUnderlyingResource() throws JavaModelException {
 	// is atually the package fragment root)
 	if (rootResource.getType() == IResource.FOLDER || rootResource.getType() == IResource.PROJECT) {
 		IContainer folder = (IContainer) rootResource;
-		String[] segs = this.names;
-		for (String seg : segs) {
+		for (String seg : this.names) {
 			IResource child = folder.findMember(seg);
 			if (child == null || child.getType() != IResource.FOLDER) {
 				throw newNotPresentException();
@@ -450,14 +449,12 @@ public boolean hasChildren() throws JavaModelException {
 @Override
 public boolean hasSubpackages() throws JavaModelException {
 	IJavaElement[] packages= ((IPackageFragmentRoot)getParent()).getChildren();
-	int namesLength = this.names.length;
-	nextPackage: for (IJavaElement package1 : packages) {
-		String[] otherNames = ((PackageFragment) package1).names;
-		if (otherNames.length <= namesLength) continue nextPackage;
-		for (int j = 0; j < namesLength; j++)
-			if (!this.names[j].equals(otherNames[j]))
-				continue nextPackage;
-		return true;
+	int namesLength = this.names.size();
+	for (IJavaElement package1 : packages) {
+		List<String> otherNames = ((PackageFragment) package1).names;
+		if (otherNames.size() > namesLength && this.names.equals(otherNames.subList(0, namesLength))) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -479,7 +476,7 @@ protected boolean internalIsValidPackageName() {
  */
 @Override
 public boolean isDefaultPackage() {
-	return this.names.length == 0;
+	return this.names.isEmpty();
 }
 protected final boolean isValidPackageName() {
 	return this.isValidPackageName;
@@ -532,7 +529,7 @@ protected void toStringChildren(int tab, StringBuilder buffer, Object info) {
 @Override
 protected void toStringInfo(int tab, StringBuilder buffer, Object info, boolean showResolvedInfo) {
 	buffer.append(tabString(tab));
-	if (this.names.length == 0) {
+	if (this.names.isEmpty()) {
 		buffer.append("<default>"); //$NON-NLS-1$
 	} else {
 		toStringName(buffer);

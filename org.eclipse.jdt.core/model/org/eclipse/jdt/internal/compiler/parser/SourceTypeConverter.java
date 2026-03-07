@@ -16,6 +16,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.compiler.parser;
 
+import java.util.List;
 /**
  * Converter from source element type to parsed compilation unit.
  *
@@ -143,8 +144,8 @@ public class SourceTypeConverter extends TypeConverter {
 		int end = topLevelTypeInfo.getNameSourceEnd();
 
 		/* convert package and imports */
-		String[] packageName = ((PackageFragment) cuHandle.getParent()).names;
-		if (packageName.length > 0)
+		List<String> packageName = ((PackageFragment) cuHandle.getParent()).names;
+		if (packageName.size() > 0)
 			// if its null then it is defined in the default package
 			this.unit.currentPackage =
 				createImportReference(packageName, start, end, false, ClassFileConstants.AccDefault);

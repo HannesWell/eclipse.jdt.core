@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
@@ -150,20 +151,20 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 	 * Creates any destination package fragment(s) which do not exists yet.
 	 * Return true if a read-only package fragment has been found among package fragments, false otherwise
 	 */
-	private boolean createNeededPackageFragments(IContainer sourceFolder, PackageFragmentRoot root, String[] newFragName, boolean moveFolder) throws JavaModelException {
+	private boolean createNeededPackageFragments(IContainer sourceFolder, PackageFragmentRoot root, List<String> newFragName, boolean moveFolder) throws JavaModelException {
 		boolean containsReadOnlyPackageFragment = false;
 		IContainer parentFolder = (IContainer) root.resource();
 		JavaElementDelta projectDelta = null;
 		String[] sideEffectPackageName = null;
 		char[][] inclusionPatterns = root.fullInclusionPatternChars();
 		char[][] exclusionPatterns = root.fullExclusionPatternChars();
-		for (int i = 0; i < newFragName.length; i++) {
-			String subFolderName = newFragName[i];
+		for (int i = 0; i < newFragName.size(); i++) {
+			String subFolderName = newFragName.get(i);
 			sideEffectPackageName = Util.arrayConcat(sideEffectPackageName, subFolderName);
 			IResource subFolder = parentFolder.findMember(subFolderName);
 			if (subFolder == null) {
 				// create deepest folder only if not a move (folder will be moved in processPackageFragmentResource)
-				if (!(moveFolder && i == newFragName.length-1)) {
+				if (!(moveFolder && i == newFragName.size() - 1)) {
 					createFolder(parentFolder, subFolderName, this.force);
 				}
 				parentFolder = parentFolder.getFolder(new Path(subFolderName));
@@ -172,7 +173,7 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 					containsReadOnlyPackageFragment = true;
 				}
 				IPackageFragment sideEffectPackage = root.getPackageFragment(sideEffectPackageName);
-				if (i < newFragName.length - 1 // all but the last one are side effect packages
+				if (i < newFragName.size() - 1 // all but the last one are side effect packages
 						&& !Util.isExcluded(parentFolder, inclusionPatterns, exclusionPatterns)) {
 					if (projectDelta == null) {
 						projectDelta = getDeltaFor(root.getJavaProject());
@@ -463,7 +464,7 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 	 */
 	private void processPackageFragmentResource(PackageFragment source, PackageFragmentRoot root, String newName) throws JavaModelException {
 		try {
-			String[] newFragName = (newName == null) ? source.names : Util.getTrimmedSimpleNames(newName);
+			List<String> newFragName = (newName == null) ? source.names : Util.getTrimmedSimpleNames(newName);
 			PackageFragment newFrag = root.getPackageFragment(newFragName);
 			IResource[] resources = collectResourcesOfInterest(source);
 
@@ -544,7 +545,7 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 			}
 
 			// Update package statement in compilation unit if needed
-			if (!Util.equalArraysOrNull(newFragName, source.names)) { // if package has been renamed, update the compilation units
+			if (!Objects.equals(newFragName, source.names)) { // if package has been renamed, update the compilation units
 				char[][] inclusionPatterns = root.fullInclusionPatternChars();
 				char[][] exclusionPatterns = root.fullExclusionPatternChars();
 				for (IResource resource : resources) {
@@ -640,9 +641,9 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 	 * @return an AST rewrite or null if no rewrite needed
 	 */
 	private TextEdit updateContent(ICompilationUnit cu, PackageFragment dest, String newName) throws JavaModelException {
-		String[] currPackageName = ((PackageFragment) cu.getParent()).names;
-		String[] destPackageName = dest.names;
-		if (Util.equalArraysOrNull(currPackageName, destPackageName) && newName == null) {
+		List<String> currPackageName = ((PackageFragment) cu.getParent()).names;
+		List<String> destPackageName = dest.names;
+		if (Objects.equals(currPackageName, destPackageName) && newName == null) {
 			return null; //nothing to change
 		} else {
 			// ensure cu is consistent (noop if already consistent)
@@ -687,8 +688,10 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 
 		return map;
 	}
-	private void updatePackageStatement(CompilationUnit astCU, String[] pkgName, ASTRewrite rewriter, ICompilationUnit cu, TextEdit additionalEdits) throws JavaModelException {
-		boolean defaultPackage = pkgName.length == 0;
+
+	private void updatePackageStatement(CompilationUnit astCU, List<String> pkgName, ASTRewrite rewriter,
+			ICompilationUnit cu, TextEdit additionalEdits) throws JavaModelException {
+		boolean defaultPackage = pkgName.isEmpty();
 		AST ast = astCU.getAST();
 		if (defaultPackage) {
 			// remove existing package statement
@@ -716,7 +719,8 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 			org.eclipse.jdt.core.dom.PackageDeclaration pkg = astCU.getPackage();
 			if (pkg != null) {
 				// rename package statement
-				Name name = ast.newName(pkgName);
+				//TODO: Create List overload for newName method?
+				Name name = ast.newName(pkgName.toArray(String[]::new));
 				rewriter.set(pkg, PackageDeclaration.NAME_PROPERTY, name, null);
 			} else {
 				// create new package statement
@@ -737,7 +741,7 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 						}
 					}
 					String commentSource = cu.getSource().substring(startPosition, endPosition);
-					commentSource = commentSource + System.lineSeparator() + "package " + pkgName[0] + ";" + System.lineSeparator(); //$NON-NLS-1$ //$NON-NLS-2$
+					commentSource = commentSource + System.lineSeparator() + "package " + pkgName.get(0) + ";" + System.lineSeparator(); //$NON-NLS-1$ //$NON-NLS-2$
 					ASTNode newPkg = rewriter.createStringPlaceholder(commentSource, ASTNode.PACKAGE_DECLARATION);
 					rewriter.set(astCU, CompilationUnit.PACKAGE_PROPERTY, newPkg, group);
 
@@ -746,14 +750,14 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 					additionalEdits.addChild(delete);
 				} else {
 					pkg = ast.newPackageDeclaration();
-					pkg.setName(ast.newName(pkgName));
+					pkg.setName(ast.newName(pkgName.toArray(String[]::new)));
 					rewriter.set(astCU, CompilationUnit.PACKAGE_PROPERTY, pkg, null);
 				}
 			}
 		}
 	}
 
-	private void updateReadOnlyPackageFragmentsForCopy(IContainer sourceFolder, PackageFragmentRoot root, String[] newFragName) {
+	private void updateReadOnlyPackageFragmentsForCopy(IContainer sourceFolder, PackageFragmentRoot root, List<String> newFragName) {
 		IContainer parentFolder = (IContainer) root.resource();
 		for (String subFolderName : newFragName) {
 			parentFolder = parentFolder.getFolder(new Path(subFolderName));
@@ -764,10 +768,10 @@ public class CopyResourceElementsOperation extends MultiOperation implements Suf
 		}
 	}
 
-	private void updateReadOnlyPackageFragmentsForMove(IContainer sourceFolder, PackageFragmentRoot root, String[] newFragName, boolean sourceFolderIsReadOnly) {
+	private void updateReadOnlyPackageFragmentsForMove(IContainer sourceFolder, PackageFragmentRoot root, List<String> newFragName, boolean sourceFolderIsReadOnly) {
 		IContainer parentFolder = (IContainer) root.resource();
-		for (int i = 0, length = newFragName.length; i < length; i++) {
-			String subFolderName = newFragName[i];
+		for (int i = 0, length = newFragName.size(); i < length; i++) {
+			String subFolderName = newFragName.get(i);
 			parentFolder = parentFolder.getFolder(new Path(subFolderName));
 			sourceFolder = sourceFolder.getFolder(new Path(subFolderName));
 			if ((sourceFolder.exists() && Util.isReadOnly(sourceFolder)) || (i == length - 1 && sourceFolderIsReadOnly)) {

@@ -153,7 +153,7 @@ public class JrtPackageFragmentRoot extends JarPackageFragmentRoot implements IM
 		return this.moduleName;
 	}
 	@Override
-	public PackageFragment getPackageFragment(String[] pkgName) {
+	public PackageFragment getPackageFragment(List<String> pkgName) {
 		// NOTE: Do we need a different kind of package fragment?
 		return new JarPackageFragment(this, pkgName);
 	}

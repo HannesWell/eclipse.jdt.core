@@ -71,6 +71,7 @@ import org.eclipse.jdt.internal.compiler.util.HashtableOfObjectToInt;
 import org.eclipse.jdt.internal.compiler.util.ObjectVector;
 import org.eclipse.jdt.internal.core.DeltaProcessor.RootInfo;
 import org.eclipse.jdt.internal.core.JavaProjectElementInfo.ProjectCache;
+import org.eclipse.jdt.internal.core.NameLookup.PackageFragmentRoots;
 import org.eclipse.jdt.internal.core.builder.JavaBuilder;
 import org.eclipse.jdt.internal.core.dom.SourceRangeVerifier;
 import org.eclipse.jdt.internal.core.dom.rewrite.RewriteEventStore;
@@ -83,7 +84,6 @@ import org.eclipse.jdt.internal.core.search.indexing.IndexManager;
 import org.eclipse.jdt.internal.core.search.processing.IJob;
 import org.eclipse.jdt.internal.core.search.processing.JobManager;
 import org.eclipse.jdt.internal.core.util.DeduplicationUtil;
-import org.eclipse.jdt.internal.core.util.HashtableOfArrayToObject;
 import org.eclipse.jdt.internal.core.util.LRUCache;
 import org.eclipse.jdt.internal.core.util.Messages;
 import org.eclipse.jdt.internal.core.util.Util;
@@ -1051,7 +1051,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			// fix for 1FVS7WE
 			// not on classpath - make the root its folder, and a default package
 			PackageFragmentRoot root = (PackageFragmentRoot) project.getPackageFragmentRoot(file.getParent());
-			pkg = root.getPackageFragment(CharOperation.NO_STRINGS);
+			pkg = root.getPackageFragment();
 		}
 		String fileName = file.getName();
 		if (TypeConstants.MODULE_INFO_CLASS_NAME_STRING.equals(fileName))
@@ -1126,7 +1126,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		try {
 			JavaProjectElementInfo projectInfo = (JavaProjectElementInfo) getJavaModelManager().getInfo(project);
 			ProjectCache projectCache = projectInfo == null ? null : projectInfo.projectCache;
-			HashtableOfArrayToObject allPkgFragmentsCache = projectCache == null ? null : projectCache.allPkgFragmentsCache;
+			Map<List<String>, PackageFragmentRoots> allPkgFragmentsCache = projectCache == null ? null : projectCache.allPkgFragmentsCache;
 			boolean isJavaLike = org.eclipse.jdt.internal.core.util.Util.isJavaLikeFileName(resourcePath.lastSegment());
 			IClasspathEntry[] entries = isJavaLike ? project.getRawClasspath() // JAVA file can only live inside SRC folder (on the raw path)
 					: ((JavaProject)project).getResolvedClasspath();
@@ -1159,14 +1159,14 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 								// is the file name in the package
 								pkgPath = pkgPath.removeLastSegments(1);
 							}
-							String[] pkgName = pkgPath.segments();
+							List<String> pkgName = List.of(pkgPath.segments());
 
 							// if package name is in the cache, then it has already been validated
 							// (see https://bugs.eclipse.org/bugs/show_bug.cgi?id=133141)
 							if (allPkgFragmentsCache != null && allPkgFragmentsCache.containsKey(pkgName))
 								return root.getPackageFragment(pkgName);
 
-							if (pkgName.length != 0 && JavaConventions.validatePackageName(Util.packageName(pkgPath, sourceLevel, complianceLevel), sourceLevel, complianceLevel).getSeverity() == IStatus.ERROR) {
+							if (!pkgName.isEmpty() && JavaConventions.validatePackageName(Util.packageName(pkgPath, sourceLevel, complianceLevel), sourceLevel, complianceLevel).getSeverity() == IStatus.ERROR) {
 								return null;
 							}
 							return root.getPackageFragment(pkgName);

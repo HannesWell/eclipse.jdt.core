@@ -213,7 +213,7 @@ public abstract class WorkingCopyOwner {
 	 */
 	public final ICompilationUnit newWorkingCopy(String name, IClasspathEntry[] classpath, IProblemRequestor problemRequestor, IProgressMonitor monitor) throws JavaModelException {
 		ExternalJavaProject project = new ExternalJavaProject(classpath);
-		IPackageFragment parent = ((PackageFragmentRoot) project.getPackageFragmentRoot(project.getProject())).getPackageFragment(CharOperation.NO_STRINGS);
+		IPackageFragment parent = ((PackageFragmentRoot) project.getPackageFragmentRoot(project.getProject())).getPackageFragment();
 		CompilationUnit result = new CompilationUnit((PackageFragment) parent, name, this);
 		result.becomeWorkingCopy(problemRequestor, monitor);
 		return result;

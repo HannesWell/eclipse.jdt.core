@@ -995,17 +995,13 @@ protected JavaSearchResultCollector resultCollector;
 			packages.add(fragment);
 			// Add all possible subpackages
 			IJavaElement[] children= ((IPackageFragmentRoot)fragment.getParent()).getChildren();
-			String[] names = ((PackageFragment)fragment).names;
-			int namesLength = names.length;
-			nextPackage: for (int i= 0, length = children.length; i < length; i++) {
-				PackageFragment currentPackage = (PackageFragment) children[i];
-				String[] otherNames = currentPackage.names;
-				if (otherNames.length <= namesLength) continue nextPackage;
-				for (int j = 0; j < namesLength; j++) {
-					if (!names[j].equals(otherNames[j]))
-						continue nextPackage;
+			List<String> names = ((PackageFragment)fragment).names;
+			int namesLength = names.size();
+			for (IJavaElement child : children) {
+				List<String> otherNames = ((PackageFragment) child).names;
+				if (otherNames.size() > namesLength && names.equals(otherNames.subList(0, namesLength))) {
+					packages.add(child);
 				}
-				packages.add(currentPackage);
 			}
 			searchPackages = new IJavaElement[packages.size()];
 			packages.toArray(searchPackages);
