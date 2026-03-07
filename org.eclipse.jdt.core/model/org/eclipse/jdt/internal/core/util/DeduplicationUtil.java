@@ -15,8 +15,12 @@
 
 package org.eclipse.jdt.internal.core.util;
 
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import org.eclipse.jdt.internal.core.JavaElement;
 
 /** Utility to provide deduplication by best effort. **/
@@ -24,14 +28,27 @@ public final class DeduplicationUtil {
 	private DeduplicationUtil() {
 	}
 
-	private static final WeakHashSet<Object> objectCache = new WeakHashSet<>();
-	private static final WeakHashSet<String> stringSymbols = new WeakHashSet<>();
+	private static final Map<Object, Reference<Object>> objectCache = new WeakHashMap<>(20 * 4 / 3 + 1);
+	private static final Map<String, Reference<String>> stringSymbols = new WeakHashMap<>(20 * 4 / 3 + 1);
 	private static final WeakHashSetOfCharArray charArraySymbols = new WeakHashSetOfCharArray();
+
+	private static <T> T add(T element, Map<T, Reference<T>> cache) {
+		cache.computeIfAbsent(element, WeakReference::new);
+		T referent = cache.computeIfAbsent(element, WeakReference::new).get();
+		if (referent != null) {
+			return referent;
+		}
+		cache.put(element, new WeakReference<>(element));
+		return element;
+	}
 
 	@SuppressWarnings("unchecked")
 	public static <T> T internObject(T obj) {
+		if (obj == null) {
+			return null;
+		}
 		synchronized (objectCache) {
-			return (T) objectCache.add(obj);
+			return (T) add(obj, objectCache);
 		}
 	}
 
@@ -42,9 +59,7 @@ public final class DeduplicationUtil {
 	}
 
 	public static String toString(char[] array) {
-		synchronized (stringSymbols) {
-			return stringSymbols.add(new String(array));
-		}
+		return intern(new String(array));
 	}
 
 	/*
@@ -55,7 +70,7 @@ public final class DeduplicationUtil {
 			return null;
 		}
 		synchronized (stringSymbols) {
-			return stringSymbols.add(s);
+			return add(s, stringSymbols);
 		}
 	}
 
@@ -65,7 +80,7 @@ public final class DeduplicationUtil {
 		}
 		synchronized (stringSymbols) {
 			for (int j = 0; j < a.length; j++) {
-				a[j] = a[j] == null ? null : stringSymbols.add(a[j]);
+				a[j] = a[j] == null ? null : add(a[j], stringSymbols);
 			}
 			return a;
 		}
@@ -77,18 +92,18 @@ public final class DeduplicationUtil {
 			return List.of();
 		}
 		synchronized (objectCache) {
-			Object existing = objectCache.get(a);
-			if (existing instanceof List l) {
+			Reference<Object> existing = objectCache.get(a);
+			if (existing != null && existing.get() instanceof List l) {
 				@SuppressWarnings("unchecked")
 				List<String> existingList = l;
 				return existingList;
 			}
 		}
 
-		ArrayList<String> result= new ArrayList<>(a.size());
+		List<String> result = new ArrayList<>(a.size());
 		synchronized (stringSymbols) {
 			for (String s:a) {
-				result.add(s == null ? null :stringSymbols.add(s));
+				result.add(s == null ? null : add(s, stringSymbols));
 			}
 		}
 		return internObject(List.copyOf(result));
